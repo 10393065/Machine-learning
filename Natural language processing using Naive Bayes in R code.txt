@@ -1,0 +1,153 @@
+
+## Explore the data
+sms <-read.csv("spamraw.csv")
+str(sms)
+sms$text <-as.character(sms$text)
+str(sms)
+
+table(sms$type)
+
+
+## Processing text data 
+
+install.packages("tm") # tm is text mining
+library(tm)
+??tm
+sms_corpus <- VCorpus(VectorSource(sms$text)) # corpus means collection
+                                              # of text.
+sms_corpus # 5559 rows in csv
+
+# Corpora means a single R object, corpus is plural
+# VCorpus means Volatile Corpus, once R object is destroyed the whole
+# corpus is gone.
+
+## Inspect function 
+
+# To find detailed information about corpus.
+inspect (sms_corpus[1:2])  # Here we have taken for 2 fields
+as.character(sms_corpus[[1]]) # view actual message (ham)
+as.character(sms_corpus[[4]]) # view actual message (spam)
+lapply(sms_corpus[1:2],as.character)
+
+sms_corpus_clean <- tm_map(sms_corpus,content_transformer(tolower)) #converting to lower case letters
+sms_corpus_clean <- tm_map(sms_corpus_clean,removeNumbers) #removing numbers
+sms_corpus_clean <- tm_map(sms_corpus_clean,removeWords,stopwords()) #remvoing stop words
+sms_corpus_clean <- tm_map(sms_corpus_clean,removePunctuation) #removing punctuation
+
+
+
+## Stemming
+
+install.packages("SnowballC")
+library("SnowballC")## word stemming algorithm used to collapse words into common roots
+
+# Single word stemming
+wordStem(c("learn","learned","learning"))
+
+#Doing stemming to entire corpus 
+sms_corpus_clean <- tm_map(sms_corpus_clean,stemDocument)
+sms_corpus_clean <- tm_map(sms_corpus_clean,stripWhitespace)#removing spaces
+
+
+## Tokenization
+
+sms_dtm <- DocumentTermMatrix(sms_corpus_clean)
+
+
+## Single shot process
+sms_dtm2 <- DocumentTermMatrix(sms_corpus,
+                               control = list(tolower = TRUE,
+                                              removeNumbers = TRUE,
+                                              stopwords = TRUE,
+                                              removePunctuation = TRUE,
+                                              stemming = TRUE))
+## Test and train dataset
+
+sms_dtm_train <- sms_dtm[1:4169,] # To train the model
+sms_dtm_test <- sms_dtm[4170:5559,] # To test the model
+
+sms_train_labels <- sms[1:4169,]$type
+sms_train_labels # Shows which is ham or spam for train dataset
+
+sms_test_labels <- sms[4170:5559,]$type
+sms_test_labels # Shows which is ham or spam for test dataset
+
+# Lets check whether the subsets are representing complete set of sms data
+
+prop.table(table(sms_train_labels)) # % of ham and spam terms in train data
+
+prop.table(table(sms_test_labels))  # % of ham and spam in test data
+
+
+## visualization words
+
+install.packages("wordcloud") 
+install.packages("RColorBrewer")
+library(wordcloud) 
+
+# wordcloud visualise the most frequent word in dataset
+wordcloud(sms_corpus_clean,min.freq = 50,random.order = FALSE, 
+          colors = brewer.pal(12, 'Dark2'))
+
+
+
+## Let's visualise spam and ham messages
+spam <- subset(sms,type == "spam")
+spam # Shows the spam messages
+
+ham <- subset(sms,type == "ham")
+ham # Shows the ham messages
+
+wordcloud(spam$text,max.words = 40,scale = c(3,0.5)) 
+#max.words is maximum words 
+
+wordcloud(ham$text,max.words = 40,scale = c(3,0.5))
+#max.words is maximum words
+
+# Shows word  which cames at least 5 times
+sms_freq_words <- findFreqTerms(sms_dtm_train,5)
+sms_freq_words
+
+
+
+sms_dtm_freq_train <- sms_dtm_train[,sms_freq_words]
+sms_dtm_freq_test <- sms_dtm_test[,sms_freq_words]
+
+# User defined function if dataset have the value 0 it will give Yes 
+# or else No.
+convert_counts <- function(x){
+  x <- ifelse(x>0,"Yes","No") 
+}
+
+
+
+sms_train <- apply(sms_dtm_freq_train,MARGIN = 2,convert_counts)
+# MARGIN = 2 means apply function is perform in columns
+sms_train # Shows different words in train dataset.
+
+sms_test <- apply(sms_dtm_freq_test,MARGIN = 2,convert_counts)
+# MARGIN =2 means apply function is perform in columns
+sms_test # Shows different  words in test dataset.
+
+
+## Training the model data
+install.packages("e1071")
+library(e1071)
+sms_classifier <- naiveBayes(sms_train,sms_train_labels)
+
+
+## Evaluating Model performance
+
+# To test data on the basis of navieBayes model & predict words 
+# according to the model.
+sms_test_pred <- predict(sms_classifier,sms_test) 
+sms_test_pred
+
+install.packages('gmodels')
+library(gmodels)
+
+table(sms_test_pred,sms_test_labels)
+# if we add the total elements it will be 1390 which is for test dataset
+# So, this model classify words into 4 types ham, spam and other two
+# in mixed.
+sms_test_pred
