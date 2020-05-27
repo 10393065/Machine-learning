@@ -1,0 +1,355 @@
+---
+title: "Machine learning Assignment 2"
+author: 'Laxman Thakur - 10393065 -Batch D '
+date: "4 August 2019"
+output:
+  html_document: default
+  word_document: default
+---
+
+### To clear Global Enviornment
+
+```{r}
+rm(list = ls())
+```
+
+### To install ggplot2 package
+
+```{r}
+install.packages("ggplot2",repos = "http://cran.us.r-project.org")
+```
+
+###To load ggplot2 package
+```{r}
+library(ggplot2)
+```
+
+# To install colorspace package
+```{r}
+install.packages("colorspace",repos = "http://cran.us.r-project.org")
+```
+### Install H2o package 
+
+```{r}
+install.packages("h2o",repos = "http://cran.us.r-project.org")
+```
+
+### Load H2o package
+
+```{r}
+library(h2o)
+```
+
+### To initialize the h2o package
+```{r}
+h2o.init()
+```
+
+### For cluster information
+
+```{r}
+h2o.clusterInfo()
+```
+
+### To install jpeg package
+
+```{r}
+install.packages("jpeg",repos = "http://cran.us.r-project.org")
+```
+
+### To load jpeg package
+
+```{r}
+library('jpeg')
+```
+
+### for Reading Bird image 
+
+```{r}
+Bird_image <- readJPEG("Bird Image for CA2.jpg") 
+head(Bird_image)
+```
+
+###  To show Bird image
+```{r}
+plot(0:1,0:1,type="n",ann=FALSE,axes=FALSE)
+rasterImage(Bird_image,0,0,1,1)
+```
+
+### To obtain Bird Image Dimension
+
+```{r}
+Bird_image_DM <- dim(Bird_image) 
+Bird_image_DM
+```
+
+
+### To assign RGB channels to data frame
+
+```{r}
+Bird_imageRGB <-data.frame(
+    x=rep(1:Bird_image_DM[2],each=Bird_image_DM[1]),
+    y=rep(Bird_image_DM:1,Bird_image_DM[2]),
+    R=as.vector(Bird_image[,,1]),
+    G= as.vector(Bird_image[,,2]), 
+    B= as.vector(Bird_image[,,3])
+)
+
+head(Bird_imageRGB)
+```
+
+### To use ggplot theme
+
+```{r}
+plottheme <-function (){
+  theme(     
+    panel.background=element_rect(size=3,                                  
+                                  colour = "black",                                  
+                                  fill = "white"),    
+    axis.ticks=element_line(size = 2),    
+    panel.grid.major = element_line(colour = "gray80",                                    
+                                    linetype = "dotted"),    
+    panel.grid.minor = element_line(colour = "gray90",                                    
+                                    linetype = "dashed"),
+             axis.title.x = element_text(size = rel(1.2),                               
+                                         face = "bold"),    
+             axis.title.y = element_text(size = rel(1.2),                              
+                                         face = "bold"),    
+    plot.title = element_text(size = 20, face = "bold",                             
+                              vjust = 1.5) ) 
+  } 
+```
+
+
+### Plotting the Original Bird image
+
+```{r}
+ggplot(data = Bird_imageRGB, aes(x=x, y=y))+  
+  geom_point(colour=rgb(Bird_imageRGB[c("R", "G", "B")]))+  
+  labs(title = "Original Image: Bird")+ 
+  xlab("x")+ 
+  ylab("y")+
+  plottheme()
+
+```
+
+### colour to Bird image
+
+```{r}
+Bird_hex <-as.h2o(Bird_imageRGB)
+```
+### coefficient of R G B with respect to image for first 6 rows
+```{r}
+head(Bird_hex)
+```
+
+
+### K means clustering for 2 with h2o
+
+```{r}
+kmeans.2 <- h2o.kmeans(training_frame = Bird_hex, k = 2, x = c('R','G','B'))
+```
+### image centroid coefficient with R G B 
+```{r}
+kmeans.2@model$centers
+
+```
+
+### image cluster prediction with h2o 
+```{r}
+kmeans2cluster <- h2o.predict(kmeans.2, Bird_hex[,c('R','G','B')])
+```
+
+### coefficient of centroid R G B with respect to k2 cluster for first 6 rows
+```{r}
+
+head(as.data.frame(kmeans.2@model$centers[as.vector(kmeans2cluster)+1,]))
+
+```
+
+### To assign RGB channel to data frame of k mean clustering with value 2
+
+```{r}
+rgbcluster2 <- as.data.frame(kmeans.2@model$centers[as.vector(kmeans2cluster)+ 1,])[,c('r','g','b')]
+kcolors.2 <- rgb(rgbcluster2) 
+```
+
+### ggplot of Bird image with k means 2
+```{r}
+ggplot(data = Bird_imageRGB, aes(x=x, y=y))+  
+  geom_point(colour=kcolors.2)+   
+  labs(title = paste(2, "Colour of Bird"))+  
+  xlab("x")+ 
+  ylab("y")+  
+  plottheme()
+
+```
+
+### K means clustering for 3 with h2o
+
+```{r}
+kmeans.3 <- h2o.kmeans(training_frame = Bird_hex, k = 3, x = c('R','G','B'))
+```
+
+### image centroid coefficient with R G B 
+```{r}
+kmeans.3@model$centers
+```
+
+### image cluster prediction with h2o 
+```{r}
+kmeans3cluster <- h2o.predict(kmeans.3, Bird_hex[,c('R','G','B')])
+```
+
+### coefficient of centroid R G B with respect to k3 cluster for first 6 rows
+```{r}
+head(as.data.frame(kmeans.3@model$centers[as.vector(kmeans3cluster)+1,]))
+
+```
+
+### To assign RGB channel to data frame of k mean clustering with value 3
+
+```{r}
+rgbcluster3 <- as.data.frame(kmeans.3@model$centers[as.vector(kmeans3cluster)+ 1,])[,c('r','g','b')] 
+kcolors.3 <- rgb(rgbcluster3) 
+```
+
+### ggplot of Bird image with k means 3
+```{r}
+ggplot(data = Bird_imageRGB, aes(x=x, y=y))+   
+  geom_point(colour=kcolors.3)+   
+  labs(title = paste(3, "Colours of Bird"))+  
+  xlab("x")+ 
+  ylab("y")+  
+  plottheme()
+
+```
+
+### K means clustering for 4 with h2o
+
+```{r}
+kmeans.4 <- h2o.kmeans(training_frame = Bird_hex, k = 4, x = c('R','G','B'))
+```
+
+### image centroid coefficient with R G B 
+```{r}
+kmeans.4@model$centers
+```
+
+### image cluster prediction with h2o 
+```{r}
+kmeans4cluster <- h2o.predict(kmeans.4, Bird_hex[,c('R','G','B')])
+```
+
+### coefficient of centroid R G B with respect to k4 cluster for first 6 rows
+```{r}
+head(as.data.frame(kmeans.4@model$centers[as.vector(kmeans4cluster)+1,]))
+```
+
+### To assign RGB channel to data frame of k mean clustering with value 4
+
+```{r}
+rgbcluster4 <- as.data.frame(kmeans.4@model$centers[as.vector(kmeans4cluster)+ 1,])[,c('r','g','b')] 
+kcolors.4 <- rgb(rgbcluster4) 
+```
+
+### ggplot of Bird image with k means 4
+```{r}
+ggplot(data = Bird_imageRGB, aes(x=x, y=y))+   
+  geom_point(colour=kcolors.4)+   
+  labs(title = paste(4, "Colours of Bird"))+ 
+  xlab("x")+ 
+  ylab("y")+ 
+  plottheme()
+
+```
+
+
+## K means clustering for 5 with h2o
+
+```{r}
+kmeans.5 <- h2o.kmeans(training_frame = Bird_hex, k = 5, x = c('R','G','B'))
+
+```
+
+### image centroid coefficient with R G B 
+```{r}
+kmeans.5@model$centers
+```
+
+### image cluster prediction with h2o 
+```{r}
+kmeans5cluster <- h2o.predict(kmeans.5, Bird_hex[,c('R','G','B')])
+```
+
+### coefficient of centroid R G B with respect to k5 cluster for first 6 rows
+```{r}
+head(as.data.frame(kmeans.5@model$centers[as.vector(kmeans5cluster)+1,]))
+
+```
+
+### To assign RGB channel to data frame of k mean clustering with value 5
+
+```{r}
+rgbcluster5 <- as.data.frame(kmeans.5@model$centers[as.vector(kmeans5cluster)+ 1,])[,c('r','g','b')] 
+kcolors.5 <- rgb(rgbcluster5) 
+
+```
+
+### ggplot of Bird image with k means 5
+```{r}
+ggplot(data = Bird_imageRGB, aes(x=x, y=y))+   
+  geom_point(colour=kcolors.5)+   
+  labs(title = paste(5, "Colours of Bird"))+  
+  xlab("x")+  
+  ylab("y")+  
+  plottheme()
+```
+
+
+###  sum of squared errors
+
+```{r}
+sum_errors <- function(predicted, actuals) { 
+  sum ( (predicted-actuals)^2, na.rm=TRUE )
+} 
+```
+
+
+## elbow method plot
+
+```{r}
+Elbow <- c(sum_errors(rgbcluster2, Bird_imageRGB[,c('R','G','B')]), 
+           sum_errors(rgbcluster3, Bird_imageRGB[,c('R','G','B')]),      
+           sum_errors(rgbcluster4, Bird_imageRGB[,c('R','G','B')]),         
+           sum_errors(rgbcluster5, Bird_imageRGB[,c('R','G','B')])) 
+
+plot(Elbow, type = 'b')
+
+```
+
+
+### Elbow method with clustering 
+```{r}
+k <- 1:15 
+Elbow <- vector() 
+for (i in k){ 
+  kmeans <- h2o.kmeans(training_frame = Bird_hex, 
+                       k = i, x = c('R','G','B')) 
+  kmeanscluster <- h2o.predict(kmeans, Bird_hex[,c('R','G','B')]) 
+  rgbcluster <- as.data.frame(kmeans@model$centers[as.vector(kmeanscluster)+1,]) [,c('r','g','b')] 
+  Elbow <- append(Elbow, sum_errors(rgbcluster, Bird_imageRGB[,c('R','G','B')]))
+}
+```
+
+### Graph of sum of squared error with number of clusters
+
+```{r}
+
+plot(Elbow, type='b', xlab = 'Number of Clusters', ylab = 'Sum of Squared Errors')
+
+
+```
+
+##An elbow chart show the SSE (Sum of Squared Error) after running k-means clustering for k going from 1 to 15. 
+##5 seems to be optimal number of clusters.
